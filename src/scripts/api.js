@@ -1,3 +1,118 @@
+const routes = {
+  champions:"http://localhost:8080/champions",
+  ask: "http://localhost:8080/champions/{id}/ask"
+};
+
+const apiService = {
+  async getChampions () {
+    const route = routes.champions;
+    const response = await fetch(route);
+    return await response.json();
+  },
+
+  async postAskChampions (id, message) {
+    const route = routes.ask.replace("{id}", id);
+
+    const options = {
+      method: "POST",
+      headers: {
+        "Content-Type" : "application/json",
+      },
+      body: JSON.stringify({question: message}),
+    };
+    const response = await fetch(route, options);
+    return await response.json();
+  }
+};
+
+const state = {
+  values:{
+    champions: [],
+  },
+  views:{
+    response: document.querySelector(".text-response"),
+    question: document.getElementById("text-request"),
+    avatar: document.getElementById("avatar"),
+    carousel: document.getElementById("carousel-cards-content"),
+  }
+}
+
+async function main() {
+  await loadChampions();
+  await renderChampions();
+  await loadCarrousel();  
+}
+
+async function loadChampions() {
+  const data = await apiService.getChampions();
+  state.values.champions = data;
+}
+
+async function renderChampions() {
+  const championsData = state.values.champions;
+  const elements = championsData.map((character) => 
+     `<div class="timeline-carousel__item" 
+     onClick="onChangeChampionsSelected(${character.id}, '${character.imageUrl}')" >
+    <div class="timeline-carousel__image">
+      <div class="media-wrapper media-wrapper--overlay"
+        style="background: url('${character.imageUrl}') 
+        center center; background-size:cover;">
+      </div>
+    </div>
+    <div class="timeline-carousel__item-inner">
+      <span class="name">${character.name}</span>
+      <span class="role">${character.role}</span>
+      <p>${character.lore}</p>
+    </div>
+  </div>`
+  );
+
+  state.views.carousel.innerHTML = elements.join(" ");
+}
+
+async function onChangeChampionsSelected(id, imageUrl) {
+   state.views.avatar.style.backgroundImage = `url('${imageUrl}')`;
+
+   state.views.avatar.dataset.id = id;
+
+   await resetForm();
+}
+
+async function resetForm() {
+  state.views.question.value = "";
+  state.views.response.textContent = await getRandomQuote();
+}
+
+
+async function getRandomQuote(){
+  const quotes = [
+    "Você tem coragem para desafiar os limites?",
+    "Parece que alguém está pronto para uma competição. Quem será o próximo?",
+    "Venha testar suas habilidades e descobrir se está à altura do desafio!",
+    "Pense que é forte o suficiente para encarar o desafio? Estou esperando por você!",
+    "Desafie-me e descubra o que é verdadeiramente poderoso.",
+    "O campo de batalha está pronto. Você está preparado para dominá-lo?",
+    "Se quer testar suas habilidades, não precisa ir muito longe. Eu estou aqui.",
+    "Não subestime a força da determinação. Está pronto para ser desafiado?",
+    "Venha, mostre-me do que é feito. Eu prometo que não será fácil.",
+    "O desafio está lançado. Sua coragem é sua única arma. O que vai fazer?"
+  ]
+
+  const ramdomIndex = Math.floor(Math.random() * quotes.length);
+
+  return quotes[ramdomIndex];
+}
+
+async function fetchAskChampion(){
+  document.body.style.cursor = "await";
+  const id = state.views.avatar.dataset.id;
+  const message = state.views.question.value;
+  console.log(message);
+  const response = await apiService.postAskChampions(id, message); 
+  state.views.response.textContent = response.answer;
+  document.body.style.cursor = "default";
+}
+
 async function loadCarrousel() {
   const caroujs = (el) => {
     return $("[data-js=" + el + "]");
@@ -28,4 +143,4 @@ async function loadCarrousel() {
   });
 }
 
-loadCarrousel();
+main();
